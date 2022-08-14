@@ -1,3 +1,4 @@
+from cProfile import label
 import os
 import pandas as pd
 from quant import *
@@ -17,14 +18,17 @@ model = fuse_bn_recursively(model)
 output_dir = 'outputs/vis/w&b'
 os.makedirs(output_dir, exist_ok=True)
 
-layer = 'features.1.conv.0'
-rename = 'dw1'
+# layer = 'features.1.conv.0'
+# rename = 'dw1'
+# layer = 'features.2.conv.1'
+# rename = 'dw2'
+layer = 'features.2.conv.2'
+rename = 'pw2_2'
 
-def plot_hist(w, path, label, fig_name, color='r'):
+def plot_hist(w, label, fig_name, color='r'):
     # axis = sns.histplot(data=w, label=fig_name, color=color, multiple='stack')
     axis = sns.histplot(data=w)
     axis.set_ylabel(label)
-    plt.savefig(path, dpi=300)
     # plt.clf()
     # axis.clear()
 
@@ -53,17 +57,25 @@ for name, p in model.named_parameters():
                 print(f'MSE Quant Loss: {F.mse_loss(p.data, w_) : .6f}')
                 w_ = w_.reshape(-1).detach().cpu().numpy()
                 df = pd.DataFrame({'Weight': w, 'Weight DeQuant': w_})
-                print(df)
-                plot_hist(df, os.path.join(output_dir, f'{rename}_weight.png'), 'Weights', 'Weights', color='r')
+                plot_hist(df, 'Weights', 'Weights', color='r')
+                plot_hist(df, 'Weights', 'Weights', color='b')
+                plt.savefig(os.path.join(output_dir, f'{rename}_weight_hist.png'), dpi=300)
                 plt.clf()
-                sns.lineplot(df)
+                sns.lineplot(data=w, label='Weight', marker='o')
+                sns.lineplot(data=w_, label='Weight DeQuant', marker='^')
                 plt.savefig(os.path.join(output_dir, f'{rename}_weight_line.png'), dpi=300)
+                plt.clf()
                 # plot_hist(w_, os.path.join(output_dir, f'{rename}_weight^.png'), 'Weights', 'Weights^', color='b')
             if 'bias' in name:
                 max_val = torch.amax(p.data.abs(), dim=-1, keepdim=True)
                 scale = max_val / Q_DIV
                 w_ = p.clone().data.div_(scale).round_().clamp_(-128, 127).mul_(scale).reshape(-1).detach().cpu().numpy()
                 df = pd.DataFrame({'Bias': w, 'Bias DeQuant': w_})
-                plot_hist(df, os.path.join(output_dir, f'{rename}_bias.png'), label='Bias', fig_name='Bias', color='r')
+                plot_hist(df, label='Bias', fig_name='Bias', color='r')
+                plt.savefig(os.path.join(output_dir, f'{rename}_bias_hist.png'), dpi=300)
+                plt.clf()
+                sns.lineplot(data=w, label='Bias', marker='o')
+                sns.lineplot(data=w_, label='Bias DeQuant', marker='^')
+                plt.savefig(os.path.join(output_dir, f'{rename}_bias_line.png'), dpi=300)
                 # plot_hist(w_, os.path.join(output_dir, f'{rename}_bias^.png'), label='Bias', fig_name='Bias^', color='b')
                 plt.clf()
