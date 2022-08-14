@@ -1,0 +1,1 @@
+CUDA_VISIBLE_DEVICES=3 python main_mobv2.py --data datasets/imagenet --pretrained -e -b 256 -j 16 --output_dir outputs/mobv2_quant -q
